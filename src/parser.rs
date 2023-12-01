@@ -1,349 +1,200 @@
-use crate::lexer::{Lexer, Token, TokenKind};
-
-// Custom parser struct for syntax analysis
+// Importing necessary modules
+use crate::lexer::Lexer;
+use crate::lexer::Token;
+use crate::lexer::TokenKind;
+// Defining the Parser
 #[derive(Debug)]
 pub struct Parser<'a> {
     lexer: &'a Lexer,
     token_index: usize,
 }
-
+// Initializing a new Parser instance with a reference to a Lexer
 impl<'a> Parser<'a> {
-    // Constructor to create a new Parser instance
     pub fn new(lexer: &'a Lexer) -> Self {
         Self { lexer, token_index: 0 }
     }
-
-    // Method to perform syntaxical analysis
-    pub fn perform_analysis(&mut self) {
-        // Flags to track the presence of sections
-        let mut data_section = false;
-        let mut input_section = false;
-        let mut process_section = false;
-        let mut output_section = false;
-
-        // Loop through tokens
+    // Performing syntactical analysis on the input tokens
+    pub fn syntaxical_analysis(&mut self) {
+        // Flags to track the presence of different sections
+        let mut data = false;
+        let mut input = false;
+        let mut process = false;
+        let mut output = false;
+        // Looping through the tokens
         while self.token_index < self.lexer.token_list.len() {
-            let token = self.retrieve_token();
-            match token.token {
+            // Getting the current token
+            let token = self.get_token();
+            // Handling different token kinds
+            match token.token  {
                 TokenKind::DATA => {
-                    // Check for valid section order
-                    if data_section | input_section | process_section | output_section {
-                        panic!("Error: 'data' must be the starting point");
-                    }
-                    data_section = true;
+                    // Checking for proper sequence of sections
+                    if data | input | process | output {panic!("Need to start with 'data'")};
+                    data = true;
+                    // Outputting debug information
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
                     self.token_index += 1;
-
-                    // Check for colon after 'data'
-                    let _colon = if TokenKind::COLON == self.retrieve_token().token {
-                        self.token_index += 1;
-                    } else {
-                        panic!("Error: Expected a colon");
-                    };
-
-                    // Loop through data section
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    // Checking for the presence of a colon
+                    let _colon = if TokenKind::COLON == self.get_token().token {self.token_index += 1} else {panic!("Expected a colon")};
+                    // Loop for processing the data section
                     loop {
-                        // Check for identifier
-                        let _id = if TokenKind::ID == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected an identifier");
-                        };
-
-                        // Check for colon after identifier
-                        let _colon = if TokenKind::COLON == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected a colon");
-                        };
-
-                        // Check for VECTOR or NUMBER
-                        match self.retrieve_token().token {
-                            TokenKind::VECTOR | TokenKind::NUMBER => {
-                                self.token_index += 1;
-                            }
-                            _ => {
-                                panic!("Error: Expected either a vector or a number");
-                            }
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _id = if TokenKind::ID == self.get_token().token {self.token_index += 1} else {panic!("Expected an identifier")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _colon = if TokenKind::COLON == self.get_token().token {self.token_index += 1} else {panic!("Expected a colon")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        match self.get_token().token {
+                            TokenKind::VECTOR | TokenKind::NUMBER => {self.token_index += 1}
+                            _ => {panic!("Expected either a vector or a number")}
                         }
-
-                        // Check for comma or exit loop
-                        let _comma = if TokenKind::COMMA == self.retrieve_token().token {
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _comma = if TokenKind::COMMA == self.get_token().token {
                             self.token_index += 1;
                         } else {
                             break;
                         };
                     }
                 }
-
+                // Handling the INPUT
                 TokenKind::INPUT => {
-                    // Check for valid section order
-                    if !data_section | input_section | process_section | output_section {
-                        panic!("Error: 'input' must come after 'data' and before 'process'");
-                    }
-                    input_section = true;
+                    // Checking for proper sequence of sections
+                    if !data | input | process | output {panic!("Need to start after 'data' and before 'process'")};
+                    input = true;
                     self.token_index += 1;
-
-                    // Check for colon after 'input'
-                    let _colon = if TokenKind::COLON == self.retrieve_token().token {
-                        self.token_index += 1;
-                    } else {
-                        panic!("Error: Expected a colon");
-                    };
-
-                    // Loop through input section
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    let _colon = if TokenKind::COLON == self.get_token().token {self.token_index += 1} else {panic!("Expected a colon")};
+                    // Loop for processing the input section
                     loop {
-                        // Check for identifier
-                        let _id = if TokenKind::ID == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected an identifier");
-                        };
-
-                        // Check for assignment
-                        let _assign = if TokenKind::ASSIGN == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected an assignment");
-                        };
-
-                        // Check for 'read'
-                        let _read = if TokenKind::READ == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected a read");
-                        };
-
-                        // Check for left parenthesis
-                        let _left_parenthesis =
-                            if TokenKind::LPAREN == self.retrieve_token().token {
-                                self.token_index += 1;
-                            } else {
-                                panic!("Error: Expected a left parenthesis");
-                            };
-
-                        // Check for STRING
-                        let _string = if TokenKind::STRING == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected a string");
-                        };
-
-                        // Check for comma or exit loop
-                        let _comma = if TokenKind::COMMA == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            break;
-                        };
-
-                        // Check for TRUE or FALSE
-                        match self.retrieve_token().token {
-                            TokenKind::TRUE | TokenKind::FALSE => {
-                                self.token_index += 1;
-                            }
-                            _ => {
-                                panic!("Error: Expected either a true or a false");
-                            }
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _id = if TokenKind::ID == self.get_token().token {self.token_index += 1} else {panic!("Expected an identifier")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _assign = if TokenKind::ASSIGN == self.get_token().token {self.token_index += 1} else {panic!("Expected an assignment")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _read = if TokenKind::READ == self.get_token().token {self.token_index += 1} else {panic!("Expected a read")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _left_parenthesis = if TokenKind::LPAREN == self.get_token().token {self.token_index += 1} else {panic!("Expected a left parenthesis")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _string = if TokenKind::STRING == self.get_token().token {self.token_index += 1} else {panic!("Expected a string")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _comma = if TokenKind::COMMA == self.get_token().token {self.token_index += 1} else {panic!("Expected a comma")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        match self.get_token().token {
+                            TokenKind::TRUE | TokenKind::FALSE => {self.token_index += 1}
+                            _ => {panic!("Expected either a true or a false")}
                         }
-
-                        // Check for comma or exit loop
-                        let _comma = if TokenKind::COMMA == self.retrieve_token().token {
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _comma = if TokenKind::COMMA == self.get_token().token {self.token_index += 1} else {panic!("Expected a comma")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _num = if TokenKind::NUM == self.get_token().token {self.token_index += 1} else {panic!("Expected a num")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _right_parethesis = if TokenKind::RPAREN == self.get_token().token {self.token_index += 1} else {panic!("Expected a right parenthesis")};
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _comma = if TokenKind::COMMA == self.get_token().token {
                             self.token_index += 1;
                         } else {
                             break;
                         };
                     }
                 }
-
+                // Handling the PROCESS
                 TokenKind::PROCESS => {
-                    // Check for valid section order
-                    if !data_section | !input_section | process_section | output_section {
-                        panic!("Error: 'process' must come after 'input' and before 'output'");
-                    }
-                    process_section = true;
+                    // Checking for proper sequence of sections
+                    if !data | !input | process | output {panic!("Need to start after 'input' and before 'output'")};
+                    process = true;
                     self.token_index += 1;
-
-                    // Check for colon after 'process'
-                    let _colon = if TokenKind::COLON == self.retrieve_token().token {
-                        self.token_index += 1;
-                    } else {
-                        panic!("Error: Expected a colon");
-                    };
-
-                    // Loop through process section
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    let _colon = if TokenKind::COLON == self.get_token().token {self.token_index += 1} else {panic!("Expected a colon")};
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    // Loop for processing the process section
                     loop {
-                        // Check for identifier
-                        let _id = if TokenKind::ID == self.retrieve_token().token {
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    let _id = if TokenKind::ID == self.get_token().token {self.token_index += 1} else {panic!("Expected an identifier")};
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    let _assign = if TokenKind::ASSIGN == self.get_token().token {self.token_index += 1} else {panic!("Expected an assignment")};
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    match self.get_token().token {
+                        TokenKind::REGRESSIONA | TokenKind::REGRESSIONB | TokenKind::CORRELATION => {
                             self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected an identifier");
-                        };
-
-                        // Check for assignment
-                        let _assign = if TokenKind::ASSIGN == self.retrieve_token().token {
-                            self.token_index += 1;
-                        } else {
-                            panic!("Error: Expected an assignment");
-                        };
-
-                        // Check for REGRESSIONA, REGRESSIONB, or CORRELATION
-                        match self.retrieve_token().token {
-                            TokenKind::REGRESSIONA | TokenKind::REGRESSIONB | TokenKind::CORRELATION => {
-                                self.token_index += 1;
-
-                                // Check for left parenthesis
-                                let _left_parenthesis =
-                                    if TokenKind::LPAREN == self.retrieve_token().token {
-                                        self.token_index += 1;
-                                    } else {
-                                        panic!("Error: Expected a left parenthesis");
-                                    };
-
-                                // Check for identifier
-                                let _id = if TokenKind::ID == self.retrieve_token().token {
-                                    self.token_index += 1;
-                                } else {
-                                    panic!("Error: Expected an identifier");
-                                };
-
-                                // Check for comma
-                                let _comma = if TokenKind::COMMA == self.retrieve_token().token {
-                                    self.token_index += 1;
-                                } else {
-                                    panic!("Error: Expected a comma");
-                                };
-
-                                // Check for identifier
-                                let _id = if TokenKind::ID == self.retrieve_token().token {
-                                    self.token_index += 1;
-                                } else {
-                                    panic!("Error: Expected an identifier");
-                                };
-
-                                // Check for right parenthesis
-                                let _right_parenthesis =
-                                    if TokenKind::RPAREN == self.retrieve_token().token {
-                                        self.token_index += 1;
-                                    } else {
-                                        panic!("Error: Expected a right parenthesis");
-                                    };
-                            }
-
-                            TokenKind::MEAN | TokenKind::STDDEV => {
-                                self.token_index += 1;
-
-                                // Check for left parenthesis
-                                let _left_parenthesis =
-                                    if TokenKind::LPAREN == self.retrieve_token().token {
-                                        self.token_index += 1;
-                                    } else {
-                                        panic!("Error: Expected a left parenthesis");
-                                    };
-
-                                // Check for identifier
-                                let _id = if TokenKind::ID == self.retrieve_token().token {
-                                    self.token_index += 1;
-                                } else {
-                                    panic!("Error: Expected an identifier");
-                                };
-
-                                // Check for right parenthesis
-                                let _right_parenthesis =
-                                    if TokenKind::RPAREN == self.retrieve_token().token {
-                                        self.token_index += 1;
-                                    } else {
-                                        panic!("Error: Expected a right parenthesis");
-                                    };
-                            }
-                            _ => {
-                                panic!("Error: Expected either a REGRESSIONA, REGRESSIONB, CORRELATION, MEAN, or STDDEV");
-                            }
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _left_parenthesis = if TokenKind::LPAREN == self.get_token().token {self.token_index += 1} else {panic!("Expected a left parenthesis")};
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _id = if TokenKind::ID == self.get_token().token {self.token_index += 1} else {panic!("Expected an identifier")};
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _comma = if TokenKind::COMMA == self.get_token().token {self.token_index += 1} else {panic!("Expected a comma")};
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _id = if TokenKind::ID == self.get_token().token {self.token_index += 1} else {panic!("Expected an identifier")};
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _right_parethesis = if TokenKind::RPAREN == self.get_token().token {self.token_index += 1} else {panic!("Expected a right parenthesis")};
                         }
-
-                        // Check for comma or exit loop
-                        let _comma = if TokenKind::COMMA == self.retrieve_token().token {
+                        TokenKind::MEAN | TokenKind::STDDEV => {
+                            self.token_index += 1;
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _left_parenthesis = if TokenKind::LPAREN == self.get_token().token {self.token_index += 1} else {panic!("Expected a left parenthesis")};
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _id = if TokenKind::ID == self.get_token().token {self.token_index += 1} else {panic!("Expected an identifier")};
+                            println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                            let _right_parethesis = if TokenKind::RPAREN == self.get_token().token {self.token_index += 1} else {panic!("Expected a right parenthesis")};
+                        }
+                        _ => {panic!("Expected either a REGRESSIONA, REGRESSIONB, CORRELATION, MEAN, or STDDEV")}
+                    }
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _comma = if TokenKind::COMMA == self.get_token().token {
                             self.token_index += 1;
                         } else {
                             break;
                         };
                     }
                 }
-
+                // Handling the OUTPUT
                 TokenKind::OUTPUT => {
-                    // Check for valid section order
-                    if !data_section | !input_section | !process_section | output_section {
-                        panic!("Error: 'output' must come after 'process' and before 'end'");
-                    }
-                    output_section = true;
+                    // Checking for proper sequence of sections
+                    if !data | !input | !process | output {panic!("Need to start after 'process' and before 'end'")};
+                    output = true;
                     self.token_index += 1;
-
-                    // Check for colon after 'output'
-                    let _colon = if TokenKind::COLON == self.retrieve_token().token {
-                        self.token_index += 1;
-                    } else {
-                        panic!("Error: Expected a colon");
-                    };
-
-                    // Loop through output section
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    let _colon = if TokenKind::COLON == self.get_token().token {self.token_index += 1} else {panic!("Expected a colon")};
+                    // Loop for processing the output
                     loop {
-                        // Check for STRING or ID
-                        match self.retrieve_token().token {
-                            TokenKind::STRING | TokenKind::ID => {
-                                self.token_index += 1;
-                            }
-                            _ => {
-                                panic!("Error: Expected either a string or an identifier");
-                            }
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        match self.get_token().token {
+                            TokenKind::STRING | TokenKind::ID => {self.token_index += 1}
+                            _ => {panic!("Expected either a true or a false")}
                         }
-
-                        // Check for comma or exit loop
-                        let _comma = if TokenKind::COMMA == self.retrieve_token().token {
+                        println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                        let _comma = if TokenKind::COMMA == self.get_token().token {
                             self.token_index += 1;
                         } else {
                             break;
                         };
                     }
                 }
-
+                // Handling the END
                 TokenKind::END => {
-                    // Check for valid section order
-                    if !data_section | !input_section | !process_section | !output_section {
-                        panic!("Error: 'end' must come after 'output'");
-                    }
-
-                    // Check for 'end'
-                    let _end = if TokenKind::END == self.retrieve_token().token {
-                        self.token_index += 1;
-                    } else {
-                        panic!("Error: Expected an end");
-                    };
-
-                    // Check for period
-                    let _period = if TokenKind::PERIOD == self.retrieve_token().token {
-                        self.token_index += 1;
-                    } else {
-                        panic!("Error: Expected a period");
-                    };
+                    // Checking for proper sequence of sections
+                    if !data | !input | !process | !output {panic!("Need to start after 'output'")};
+                    let _end = if TokenKind::END == self.get_token().token {self.token_index += 1} else {panic!("Expected an end")};
+                    println!("{}. {:?}", self.token_index + 1, self.get_token().token);
+                    let _period = if TokenKind::PERIOD == self.get_token().token {self.token_index += 1} else {panic!("Expected a period")};
                 }
-
+                // Handling other token kinds
                 _ => unimplemented!(),
             }
         }
     }
 
-    // Method to retrieve the current token
-    pub fn retrieve_token(&self) -> &Token {
+    // Method to get the current token
+    pub fn get_token(&self) -> &Token {
+        // Accessing the current token
         let token = self.lexer.token_list.get(self.token_index);
-
-        // Check for token existence or panic if out of bounds
+        // Checking for valid token access
         if self.token_index < self.lexer.token_list.len() {
             match token {
                 Some(_path) => (),
-                None => panic!("Error: Expected a token here!"),
+                None => panic!("Expected a token here!"),
             }
         } else {
-            panic!("Error: Out of bound token_list access!");
+            panic!("Out of bound token_list access!");
         }
-
         return token.unwrap();
-    }
+    }    
 }
